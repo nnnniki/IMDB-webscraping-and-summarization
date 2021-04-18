@@ -1,0 +1,43 @@
+library(rvest) 
+library(xml2) 
+library(stringr) 
+library(dplyr) 
+library(tidyverse)
+
+page<-read_html("https://www.imdb.com/name/nm0000206/?ref_=nv_sr_srsg_0") 
+moviename <- page %>% html_nodes("#filmography :nth-child(2) .filmo-row b a") %>%
+html_text()
+moviename <- moviename[-(1:9)]
+s <- html_session("https://www.imdb.com/name/nm0000206/?ref_=nv_sr_srsg_0") 
+allcast<-list()
+
+for(i in 1:98){ if(i == 18){
+cast<-html_session("https://www.imdb.com/title/tt4139124/?ref_=nm_flmg_act_27") }
+else if(i == 23){ cast<-html_session("https://www.imdb.com/title/tt2911666/?ref_=nm_flmg_act_32")
+}
+else if(i == 59){
+cast<-html_session("https://www.imdb.com/title/tt0111257/?ref_=nm_flmg_act_68") }
+else{
+cast <- s %>% follow_link(moviename[i]) }
+castname <- cast %>%
+follow_link("See full cast") %>% read_html() %>% html_nodes(".primary_photo+ td a") %>% html_text() %>%
+str_trim() 
+castname<-castname[castname!="Keanu Reeves"] 
+allcast[[i]]<-castname
+}
+names(allcast)<-moviename
+
+actors<-c() 
+movies <- c() 
+for(i in 1:98){
+names<-allcast[[i]]
+actors<-c(actors,names)
+movies<-c(movies, rep(moviename[i], length(names)))
+}
+
+data<-data.frame( actors = actors, moviename = movies)
+summary_table<- data %>%
+group_by(actors) %>%
+summarise(times = n(), moviename=moviename)%>% filter(times > 3) %>%
+arrange(desc(times))
+summary_table
